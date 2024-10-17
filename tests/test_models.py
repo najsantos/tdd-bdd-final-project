@@ -27,7 +27,7 @@ import os
 import logging
 import unittest
 from decimal import Decimal
-from service.models import Product, Category, db
+from service.models import Product, Category, db, DataValidationError
 from service import app
 from tests.factories import ProductFactory
 
@@ -268,3 +268,79 @@ class TestProductModel(unittest.TestCase):
         # Assert that each product’s category matches the expected category.
         for product in found:
             self.assertEqual(product.category, category)
+
+    def test_find_product_by_price(self):
+        """It should Find a product by price in the database"""
+
+        # Create a batch of 10 Product objects using the ProductFactory and save them to the database.
+        products = ProductFactory.create_batch(10)
+        for product in products:
+            product.create()
+
+        # Retrieve the price of the first product in the products list
+        price = products[0].price
+
+        # Count the number of occurrences of the product price in the list
+        count = len([p for p in products if p.price == price])
+
+        # Retrieve products from the database that have the specified price.
+        found = Product.find_by_price(str(price))
+
+        # Assert if the count of the found products matches the expected count.
+        self.assertEqual(found.count(), count)
+
+        # Assert that each product’s price matches the expected price.
+        for product in found:
+            self.assertEqual(product.price, price)
+
+    def test_update_a_product_with_empty_id(self):
+        """It should Raise a DataValidationError"""
+
+        # Create a Product object using the ProductFactory
+        product = ProductFactory()
+
+        # Set the ID of the product object to None and then create the product.
+        product.id = None
+        product.create()
+
+        # Attempt updating ID to None and assert raised DataValidationError.
+        product.id = None
+        self.assertRaises(DataValidationError, product.update)
+
+    def test_deserialize_errors(self):
+        """It should Raise DataValidationError within the deserialize method."""
+
+        # Create a Product object using the ProductFactory
+        product = ProductFactory()
+
+        # Serialize product as a dictionary
+        base_dict = product.serialize()
+
+        # Attempt to deserialize with invalid availability type and assert raised DataValidationError.
+        new_dict = base_dict.copy()
+        new_dict['available'] = 1
+        with self.assertRaises(DataValidationError) as cm:
+            product.deserialize(new_dict)
+        self.assertIn("Invalid type for boolean [available]", str(cm.exception))
+
+        # Attempt to deserialize with invalid attribute and assert raised DataValidationError.
+        new_dict = base_dict.copy()
+        new_dict['category'] = 'TOYS'
+        with self.assertRaises(DataValidationError) as cm:
+            product.deserialize(new_dict)
+        self.assertIn("Invalid attribute", str(cm.exception))
+
+        # Attempt to deserialize with invalid key and assert raised DataValidationError.
+        new_dict = base_dict.copy()
+        del new_dict['name']
+        with self.assertRaises(DataValidationError) as cm:
+            product.deserialize(new_dict)
+        self.assertEqual(str(cm.exception), "Invalid product: missing name")
+
+        # Attempt to deserialize with invalid type and assert raised DataValidationError.
+        new_dict = base_dict.copy()
+        new_dict['price'] = None
+        with self.assertRaises(DataValidationError) as cm:
+            product.deserialize(new_dict)
+        self.assertIn("Invalid product: body of request contained bad or no data", str(cm.exception))
+
