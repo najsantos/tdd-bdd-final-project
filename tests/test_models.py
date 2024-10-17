@@ -319,28 +319,27 @@ class TestProductModel(unittest.TestCase):
         # Attempt to deserialize with invalid availability type and assert raised DataValidationError.
         new_dict = base_dict.copy()
         new_dict['available'] = 1
-        with self.assertRaises(DataValidationError) as cm:
+        with self.assertRaises(DataValidationError) as context:
             product.deserialize(new_dict)
-        self.assertIn("Invalid type for boolean [available]", str(cm.exception))
+        self.assertIn("Invalid type for boolean [available]", str(context.exception))
 
         # Attempt to deserialize with invalid attribute and assert raised DataValidationError.
         new_dict = base_dict.copy()
         new_dict['category'] = 'TOYS'
-        with self.assertRaises(DataValidationError) as cm:
+        with self.assertRaises(DataValidationError) as context:
             product.deserialize(new_dict)
-        self.assertIn("Invalid attribute", str(cm.exception))
+        self.assertIn("Invalid attribute", str(context.exception))
 
         # Attempt to deserialize with invalid key and assert raised DataValidationError.
         new_dict = base_dict.copy()
         del new_dict['name']
-        with self.assertRaises(DataValidationError) as cm:
+        with self.assertRaises(DataValidationError) as context:
             product.deserialize(new_dict)
-        self.assertEqual(str(cm.exception), "Invalid product: missing name")
+        self.assertEqual(str(context.exception), "Invalid product: missing name")
 
         # Attempt to deserialize with invalid type and assert raised DataValidationError.
         new_dict = base_dict.copy()
         new_dict['price'] = None
-        with self.assertRaises(DataValidationError) as cm:
+        with self.assertRaises(DataValidationError) as context:
             product.deserialize(new_dict)
-        self.assertIn("Invalid product: body of request contained bad or no data", str(cm.exception))
-
+        self.assertIn("Invalid product: body of request contained bad or no data", str(context.exception))
